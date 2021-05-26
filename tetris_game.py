@@ -341,6 +341,9 @@ def fix_locked_positions(l):
 
 
 def clear_rows(grid, locked):
+    # TODO BREAKS IF THERE ARE MULTIPLE LINES CLEARED BUT NOT ALL TOGETHER
+    # THINK OF FAILED T-SPIN TRIPLE; triple setup without the lip, send an I piece in, 100% of the time causes issues
+    # needs to be completely rewritten
     fix_locked_positions(locked)
     inc = 0
     for i in range(len(grid)-1,-1,-1):
@@ -440,9 +443,9 @@ def draw_window(surface):
 
 
 def redraw(w, n, h):
-    draw_window(win)
-    draw_next_shapes(n, win)
-    draw_hold_shape(h, win)
+    draw_window(w)
+    draw_next_shapes(n, w)
+    draw_hold_shape(h, w)
 
 
 def countdown(surface, pieces, hold):
@@ -590,8 +593,7 @@ def main():
             game_speed = FPS
 
         if update_time % int(FPS / 10) == 0:
-            print('fps')
-            if not up_locked:
+            if not up_locked and not change_piece:
                 if current_piece.left:
                     current_piece.move_left()
                     if not valid_space(current_piece, grid):
@@ -609,7 +611,6 @@ def main():
                     if not valid_space(current_piece, grid):
                         current_piece.move_up()
         if update_time % int(FPS / game_speed) == 0:
-            print('game speed')
             current_piece.move_down()
             if not (valid_space(current_piece, grid)) and current_piece.y > 0:
                 current_piece.move_up()
@@ -620,15 +621,15 @@ def main():
             else:
                 current_piece.floored = False
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] and not up_locked:
+        if keys[pygame.K_LEFT] and not up_locked and not change_piece:
             current_piece.left = True
         else:
             current_piece.left = False
-        if keys[pygame.K_RIGHT] and not up_locked:
+        if keys[pygame.K_RIGHT] and not up_locked and not change_piece:
             current_piece.right = True
         else:
             current_piece.right = False
-        if keys[pygame.K_DOWN] and not up_locked:
+        if keys[pygame.K_DOWN] and not up_locked and not change_piece:
             current_piece.down = True
         else:
             current_piece.down = False
@@ -637,7 +638,7 @@ def main():
                 run = False
                 pygame.display.quit()
                 quit()
-            if event.type == pygame.KEYDOWN and not up_locked:
+            if event.type == pygame.KEYDOWN and not up_locked and not change_piece:
                 if event.key == pygame.K_r:
                     main()
                 if event.key == pygame.K_x:
@@ -650,7 +651,7 @@ def main():
                         current_piece.move_down()
                     current_piece.move_up()
                 if event.key == pygame.K_c:
-                    if hold_valid and not change_piece:
+                    if hold_valid:
                         remove_piece(grid, current_piece)
                         hold_valid = False
                         if hold_piece == None:
@@ -684,7 +685,6 @@ def main():
             up_locked = False
 
             total_clear_lines += clear_rows(grid, locked_positions)
-            print(total_clear_lines)
 
         redraw(win, [next_piece] + bag[:4], hold_piece)
         draw_ghost(current_piece, grid, win)
