@@ -323,47 +323,32 @@ def draw_grid(surface, row, col, x=top_left_x, y=top_left_y, w=play_width, h=pla
             pygame.draw.line(surface, (200,200,200), (sx + j * size, sy), (sx + j * size, sy + h))
 
 
-def fix_locked_positions(l):
-    m = [[board_color for _ in range(10)] for _ in range(20)]
-    for p in l:
-        m[p[1]][p[0]] = l[p]
-    invalid_lines = []
-    for i, row in enumerate(m):
-        if board_color not in row:
-            invalid_lines.append(i)
-    invalid_keys = []
-    for key in l:
-        if key[1] in invalid_lines:
-            invalid_keys.append(key)
-    for key in invalid_keys:
-        l.pop(key)
-    return l
-
-
 def clear_rows(grid, locked):
-    # TODO BREAKS IF THERE ARE MULTIPLE LINES CLEARED BUT NOT ALL TOGETHER
-    # THINK OF FAILED T-SPIN TRIPLE; triple setup without the lip, send an I piece in, 100% of the time causes issues
-    # needs to be completely rewritten
-    fix_locked_positions(locked)
-    inc = 0
-    for i in range(len(grid)-1,-1,-1):
-        row = grid[i]
+    clear = []
+    for i, row in enumerate(grid):
         if board_color not in row:
-            inc += 1
-            ind = i
-            for j in range(len(row)):
-                try:
-                    del locked[(j, i)]
-                except:
-                    continue
-    if inc > 0:
-        for key in sorted(list(locked), key=lambda x: x[1])[::-1]:
-            x, y = key
-            if y < ind:
-                newKey = (x, y + inc)
-                locked[newKey] = locked.pop(key)
-    return inc
-
+            clear.append(i)
+    if len(clear) > 0:
+        c = False
+        while not c:
+            c = True
+            for key in sorted(locked, key=lambda x: x[1])[::-1]:
+                y = key[1]
+                if y in clear:
+                    c = False
+                    try:
+                        del locked[key]
+                    except:
+                        continue
+        for i in clear:
+            for key in sorted(locked, key=lambda x: x[1])[::-1]:
+                x, y = key
+                if y < i:
+                    newKey = (x, y + 1)
+                    locked[newKey] = locked.pop(key)
+            
+    return len(clear)
+    
 
 def remove_piece(grid, piece):
     format = piece.shape[piece.rotation % len(piece.shape)]
