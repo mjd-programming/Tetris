@@ -586,10 +586,11 @@ def main():
         update_time += 1
 
         game_speed = 2 + int(total_clear_lines / 8)
-        if game_speed > 10:
-            game_speed = 10
+        if game_speed > FPS:
+            game_speed = FPS
 
-        if update_time % (FPS / 10) == 0:
+        if update_time % int(FPS / 10) == 0:
+            print('fps')
             if not up_locked:
                 if current_piece.left:
                     current_piece.move_left()
@@ -607,7 +608,8 @@ def main():
                     current_piece.move_down()
                     if not valid_space(current_piece, grid):
                         current_piece.move_up()
-        if update_time % (FPS / game_speed) == 0:
+        if update_time % int(FPS / game_speed) == 0:
+            print('game speed')
             current_piece.move_down()
             if not (valid_space(current_piece, grid)) and current_piece.y > 0:
                 current_piece.move_up()
