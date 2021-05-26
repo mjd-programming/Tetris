@@ -58,7 +58,7 @@ Z = [['.....',
 
 I = [['.....',
       '.....',
-      '0000.',
+      '.0000',
       '.....',
       '.....'],
      ['.0...',
@@ -67,7 +67,7 @@ I = [['.....',
       '.0...',
       '.....'],
      ['.....',
-      '0000.',
+      '.0000',
       '.....',
       '.....',
       '.....'],
@@ -76,6 +76,8 @@ I = [['.....',
       '..0..',
       '..0..',
       '.....']]
+
+augmented_i = ['.....','.....','0000.','.....','.....']
 
 O = [['.....',
       '.....',
@@ -364,6 +366,7 @@ def draw_next_shapes(shapes, surface):
     label = font.render('Next', 1, (0,0,0))
     for yh, shape in enumerate(shapes):
         format = shape.shape[0]
+        if shape.shape == I: format = augmented_i
         pygame.draw.rect(surface, board_color, (450, 60 + yh * 90, 60, 60))
         draw_grid(surface, 4, 4, 450, 60 + yh * 90, 60, 60, block_size / 2)
         for i, line in enumerate(format):
@@ -383,6 +386,7 @@ def draw_hold_shape(shape, surface):
     draw_grid(surface, 4, 4, 30, 60 , 60, 60, block_size / 2)
     if shape != None:
         format = shape.shape[0]
+        if shape.shape == I: format = augmented_i
         pygame.draw.rect(surface, board_color, (30, 60, 60, 60), 3)
         for i, line in enumerate(format):
             row = list(line)
@@ -662,7 +666,6 @@ def main():
             for pos in shape_pos:
                 p = (pos[0], pos[1])
                 locked_positions[p] = current_piece.color
-            temp_piece = current_piece
             current_piece = next_piece
             next_piece = get_shape()
             change_piece = False
