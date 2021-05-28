@@ -760,7 +760,7 @@ def main():
         
 
         if change_piece:
-            was_line_clear_t_spin(current_piece, locked_positions, 'r')
+            # was_line_clear_t_spin(current_piece, locked_positions, 'r')
             for pos in shape_pos:
                 p = (pos[0], pos[1])
                 locked_positions[p] = current_piece.color
