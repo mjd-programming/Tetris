@@ -166,7 +166,7 @@ T = [['.....',
 shapes = [S, Z, I, O, J, L, T]
 shape_colors = [(0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 255, 0), (0, 0, 255), (255, 165, 0), (128, 0, 128)]
 board_color = (220, 220, 220)
-starting_piece_position = (4, 2)
+starting_piece_position = (4, 1)
 
 
 class Piece(object):
@@ -284,7 +284,9 @@ def valid_space(shape, grid, ghost=None):
 def check_lost(positions):
     for pos in positions:
         x, y = pos
-        if y < 0 and x == 5:
+        if y <= 0 and (x > starting_piece_position[0] - 2 and x < starting_piece_position[0] + 2):
+            return True
+        if y < 0:
             return True
     return False
 
@@ -544,15 +546,158 @@ def spin_left_handler(piece, grid):
     return True
 
 
+def was_line_clear_t_spin(piece, locked, previous_move):
+    if piece.shape != T:
+        return False
+    else:
+        print(piece.shape[piece.rotation])
+        # learn off of this TODO
+        if previous_move == 'spin':
+            pass
+
+
+
+class Player:
+    def __init__(self, grid, current_piece, hold, next, change):
+        self.update_values(grid, current_piece, hold, next, change)
+        self.up_locked = False
+        self.hold_valid = True
+        self.score = 0
+
+
+    def get_up_locked(self):
+        return self.up_locked
+
+    
+    def get_hold_piece(self):
+        return self.h_piece
+
+    
+    def get_current_piece(self):
+        return self.c_piece
+
+    
+    def get_next_piece(self):
+        return self.n_piece
+
+
+    def set_up_locked(self, b):
+        self.up_locked = b
+
+    
+    def set_hold_valid(self, b):
+        self.hold_valid = b
+
+
+    def set_change_piece(self, b):
+        self.change_piece = b
+
+
+    def add_score(self, c):
+        self.score += c
+
+
+    def update_values(self, grid, current_piece, hold, next, change):
+        self.grid = grid
+        self.c_piece = current_piece
+        self.h_piece = hold
+        self.n_piece = next
+        self.change_piece = change
+
+
+    def move_up(self, n=1):
+        if self.up_locked or self.change_piece: return
+        for _ in range(n):
+            self.c_piece.move_up()
+            if not valid_space(self.c_piece, self.grid):
+                self.c_piece.move_down()
+
+
+    def move_down(self, n=1):
+        if self.up_locked or self.change_piece: return
+        for _ in range(n):
+            self.c_piece.move_down()
+            if not valid_space(self.c_piece, self.grid):
+                self.c_piece.move_up()
+
+
+    def move_left(self, n=1):
+        if self.up_locked or self.change_piece: return
+        for _ in range(n):
+            self.c_piece.move_left()
+            if not valid_space(self.c_piece, self.grid):
+                self.c_piece.move_right()
+
+
+    def move_right(self, n=1):
+        if self.up_locked or self.change_piece: return
+        for _ in range(n):
+            self.c_piece.move_right()
+            if not valid_space(self.c_piece, self.grid):
+                self.c_piece.move_left()
+
+
+    def spin_left(self, n=1):
+        if self.up_locked or self.change_piece: return
+        for _ in range(n):
+            self.c_piece.floored = spin_left_handler(self.c_piece, grid)
+
+
+    def spin_right(self, n=1):
+        if self.up_locked or self.change_piece: return
+        for _ in range(n):
+            self.c_piece.floored = spin_right_handler(self.c_piece, grid)
+
+
+    def hard_drop(self):
+        self.up_locked = True
+        while valid_space(self.c_piece, grid):
+            self.c_piece.move_down()
+        self.c_piece.move_up()
+
+
+    def hold(self):
+        if self.hold_valid and not self.up_locked and not self.change_piece:
+            remove_piece(self.grid, self.c_piece)
+            self.hold_valid = False
+            if self.h_piece == None:
+                self.h_piece = self.c_piece
+                self.h_piece.x = starting_piece_position[0]
+                self.h_piece.y = starting_piece_position[1]
+                self.c_piece = self.n_piece
+                self.n_piece = get_shape()
+            else:
+                temp_piece = self.h_piece
+                self.h_piece = self.c_piece
+                self.c_piece = temp_piece
+                self.c_piece.x = starting_piece_position[0]
+                self.c_piece.y = starting_piece_position[1]
+
+
+    def make_move(self):
+        choice = random.randint(0, 10)
+        if choice == 0:
+            self.move_down()
+        if choice == 1:
+            self.move_left()
+        if choice == 2:
+            self.move_right()
+        if choice == 3:
+            self.spin_left()
+        if choice == 4:
+            self.spin_right()
+        if choice == 5:
+            self.hold()
+        if choice == 6:
+            self.hard_drop()
+
+
 def main():
     global grid, bag
 
     bag = get_new_bag() + get_new_bag()
 
     hold_piece = None
-    hold_valid = True
-
-    up_locked = False
 
     locked_positions = {}
     grid = create_grid(locked_positions)
@@ -562,6 +707,8 @@ def main():
     current_piece = get_shape()
     next_piece = get_shape()
     clock = pygame.time.Clock()
+
+    player = Player(grid, current_piece, hold_piece, next_piece, change_piece)
 
     update_time = 0
     FPS = 30
@@ -581,80 +728,28 @@ def main():
         if game_speed > FPS:
             game_speed = FPS
 
-        if update_time % int(FPS / 10) == 0:
-            if not up_locked and not change_piece:
-                if current_piece.left:
-                    current_piece.move_left()
-                    if not valid_space(current_piece, grid):
-                        current_piece.move_right()
-                    else:
-                        current_piece.floored = False
-                elif current_piece.right:
-                    current_piece.move_right()
-                    if not valid_space(current_piece, grid):
-                        current_piece.move_left()
-                    else:
-                        current_piece.floored = False
-                if current_piece.down:
-                    current_piece.move_down()
-                    if not valid_space(current_piece, grid):
-                        current_piece.move_up()
+        if update_time % int(1) == 0:
+            player.update_values(grid, current_piece, hold_piece, next_piece, change_piece)
+            player.make_move()
+            hold_piece = player.get_hold_piece()
+            current_piece = player.get_current_piece()
+            next_piece = player.get_next_piece()
         if update_time % int(FPS / game_speed) == 0:
             current_piece.move_down()
             if not (valid_space(current_piece, grid)) and current_piece.y > 0:
                 current_piece.move_up()
                 if current_piece.floored:
                     change_piece = True
+                    player.set_change_piece(True)
                 else:
                     current_piece.floored = True
             else:
                 current_piece.floored = False
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] and not up_locked and not change_piece:
-            current_piece.left = True
-        else:
-            current_piece.left = False
-        if keys[pygame.K_RIGHT] and not up_locked and not change_piece:
-            current_piece.right = True
-        else:
-            current_piece.right = False
-        if keys[pygame.K_DOWN] and not up_locked and not change_piece:
-            current_piece.down = True
-        else:
-            current_piece.down = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
                 pygame.display.quit()
                 quit()
-            if event.type == pygame.KEYDOWN and not up_locked and not change_piece:
-                if event.key == pygame.K_r:
-                    main()
-                if event.key == pygame.K_x:
-                    current_piece.floored = spin_right_handler(current_piece, grid)                 
-                if event.key == pygame.K_z:
-                    current_piece.floored = spin_left_handler(current_piece, grid)   
-                if event.key == pygame.K_UP:
-                    up_locked = True
-                    while valid_space(current_piece, grid):
-                        current_piece.move_down()
-                    current_piece.move_up()
-                if event.key == pygame.K_c:
-                    if hold_valid:
-                        remove_piece(grid, current_piece)
-                        hold_valid = False
-                        if hold_piece == None:
-                            hold_piece = current_piece
-                            hold_piece.x = starting_piece_position[0]
-                            hold_piece.y = starting_piece_position[1]
-                            current_piece = next_piece
-                            next_piece = get_shape()
-                        else:
-                            temp_piece = hold_piece
-                            hold_piece = current_piece
-                            current_piece = temp_piece
-                            current_piece.x = starting_piece_position[0]
-                            current_piece.y = starting_piece_position[1]
 
         shape_pos = get_shape_positions(current_piece)
         for i in range(len(shape_pos)):
@@ -662,17 +757,25 @@ def main():
             if y > -1:
                 grid[y][x] = current_piece.color
 
+        
+
         if change_piece:
+            was_line_clear_t_spin(current_piece, locked_positions, 'r')
             for pos in shape_pos:
                 p = (pos[0], pos[1])
                 locked_positions[p] = current_piece.color
             current_piece = next_piece
             next_piece = get_shape()
             change_piece = False
-            hold_valid = True
-            up_locked = False
+            player.set_change_piece(False)
+            player.set_hold_valid(True)
+            player.set_up_locked(False)
 
-            total_clear_lines += clear_rows(grid, locked_positions)
+            lines_cleared = clear_rows(grid, locked_positions)
+            if lines_cleared == 4:
+                # tetrissaa
+                pass
+            total_clear_lines += lines_cleared
 
         redraw(win, [next_piece] + bag[:4], hold_piece)
         draw_ghost(current_piece, grid, win)
